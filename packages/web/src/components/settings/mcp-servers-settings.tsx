@@ -11,6 +11,7 @@ import {
 } from "@/hooks/use-mcp-servers";
 import { useRepos } from "@/hooks/use-repos";
 import { parseMaybeEnvContent } from "@/lib/env-paste";
+import { randomUuid } from "@/lib/uuid";
 import { PlusIcon, TerminalIcon, GlobeIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,7 @@ type ScopeMode = "global" | "selected";
 type EnvRow = { id: string; key: string; value: string };
 
 function createEnvRow(init?: { key: string; value: string }): EnvRow {
-  return { id: crypto.randomUUID(), key: init?.key ?? "", value: init?.value ?? "" };
+  return { id: randomUuid(), key: init?.key ?? "", value: init?.value ?? "" };
 }
 
 function envRowsToRecord(rows: EnvRow[]): Record<string, string> {

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { mutate } from "swr";
 import { SIDEBAR_SESSIONS_KEY } from "@/lib/session-list";
+import { randomUuid } from "@/lib/uuid";
 import type { Artifact, SandboxEvent } from "@/types/session";
 import type {
   ParticipantPresence,
@@ -576,7 +577,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         JSON.stringify({
           type: "subscribe",
           token: wsTokenRef.current,
-          clientId: crypto.randomUUID(),
+          clientId: randomUuid(),
         })
       );
     };
