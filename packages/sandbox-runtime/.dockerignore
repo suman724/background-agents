@@ -1,0 +1,27 @@
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Tests aren't needed inside the running sandbox.
+tests/
+
+# Local editor / OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Don't ship the package metadata that's only useful at build time.
+pyproject.toml
+README.md
+
+# Docker files themselves don't need to be inside the image.
+Dockerfile
+.dockerignore
