@@ -117,6 +117,21 @@ export default tseslint.config(
     },
   },
 
+  // Dev helper scripts run with Node directly (not part of the TS project).
+  {
+    files: ["scripts/**/*.{js,mjs}"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
+    },
+    rules: {
+      "no-console": "off",
+    },
+  },
+
   // Disable rules that conflict with Prettier
   eslintConfigPrettier
 );
