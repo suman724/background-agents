@@ -354,6 +354,59 @@ describe("LocalDockerSandboxProvider.stopSandbox", () => {
   });
 });
 
+// ==================== opencode auth mount ====================
+
+describe("LocalDockerSandboxProvider opencodeAuthPath mount", () => {
+  it("omits mounts when opencodeAuthPath is not configured", async () => {
+    const client = createMockClient();
+    const provider = new LocalDockerSandboxProvider(
+      client,
+      defaultProviderConfig,
+      defaultGetCloneToken
+    );
+
+    await provider.createSandbox(baseCreateConfig);
+    const params = (client.createSandbox as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(params.mounts).toBeUndefined();
+  });
+
+  it("forwards a read-only mount when opencodeAuthPath is set", async () => {
+    const client = createMockClient();
+    const provider = new LocalDockerSandboxProvider(
+      client,
+      {
+        ...defaultProviderConfig,
+        opencodeAuthPath: "/home/dev/.local/share/opencode/auth.json",
+      },
+      defaultGetCloneToken
+    );
+
+    await provider.createSandbox(baseCreateConfig);
+    const params = (client.createSandbox as ReturnType<typeof vi.fn>).mock.calls[0][0];
+
+    expect(params.mounts).toEqual([
+      {
+        hostPath: "/home/dev/.local/share/opencode/auth.json",
+        containerPath: "/root/.local/share/opencode/auth.json",
+        readOnly: true,
+      },
+    ]);
+  });
+
+  it("treats whitespace-only opencodeAuthPath as unset", async () => {
+    const client = createMockClient();
+    const provider = new LocalDockerSandboxProvider(
+      client,
+      { ...defaultProviderConfig, opencodeAuthPath: "   " },
+      defaultGetCloneToken
+    );
+
+    await provider.createSandbox(baseCreateConfig);
+    const params = (client.createSandbox as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(params.mounts).toBeUndefined();
+  });
+});
+
 // ==================== capabilities ====================
 
 describe("LocalDockerSandboxProvider capabilities", () => {

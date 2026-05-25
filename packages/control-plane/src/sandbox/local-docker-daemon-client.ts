@@ -23,6 +23,15 @@ export interface LocalDockerDaemonConfig {
   daemonSecret: string;
 }
 
+export interface LocalDockerMount {
+  /** Path on the daemon's host machine. `~` is expanded by the daemon. */
+  hostPath: string;
+  /** Absolute path inside the container where the host path is bound. */
+  containerPath: string;
+  /** Default true. Set false for writeable mounts (use sparingly). */
+  readOnly?: boolean;
+}
+
 export interface LocalDockerCreateParams {
   sandboxId: string;
   sessionId: string;
@@ -33,6 +42,8 @@ export interface LocalDockerCreateParams {
     ttyd?: boolean;
     tunnel: number[];
   };
+  /** Optional bind mounts from host to container. Daemon rejects forbidden host prefixes. */
+  mounts?: LocalDockerMount[];
 }
 
 export interface LocalDockerCreateResponse {

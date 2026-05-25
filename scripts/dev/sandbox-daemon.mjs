@@ -20,8 +20,9 @@
 
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readFileSync, statSync } from "node:fs";
+import { dirname, join, resolve, normalize } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -108,7 +109,58 @@ function portMappingsFromInspect(info) {
   return result;
 }
 
-async function createSandbox({ sandboxId, sessionId, env: envVars, labels, ports }) {
+// Host paths we refuse to mount, even read-only. Adjusting any of these would
+// give the in-container agent escalation routes (read SSH keys, replace
+// kernel modules, etc.). Narrow and conservative — anything specific to this
+// project's threat model belongs here.
+const FORBIDDEN_MOUNT_PREFIXES = [
+  "/etc",
+  "/var",
+  "/proc",
+  "/sys",
+  "/boot",
+  "/dev",
+  "/root/.ssh",
+];
+
+function resolveHostPath(rawPath) {
+  if (typeof rawPath !== "string" || rawPath.length === 0) {
+    throw new HttpError(400, "mounts[].hostPath must be a non-empty string");
+  }
+  let expanded = rawPath;
+  if (expanded === "~" || expanded.startsWith("~/")) {
+    expanded = join(homedir(), expanded.slice(1).replace(/^\//, ""));
+  }
+  const absolute = resolve(expanded);
+  const norm = normalize(absolute);
+  for (const banned of FORBIDDEN_MOUNT_PREFIXES) {
+    if (norm === banned || norm.startsWith(banned + "/")) {
+      throw new HttpError(400, `mounts[].hostPath refused (forbidden prefix ${banned}): ${rawPath}`);
+    }
+  }
+  try {
+    statSync(norm);
+  } catch {
+    throw new HttpError(400, `mounts[].hostPath does not exist on host: ${norm}`);
+  }
+  return norm;
+}
+
+function buildMountArgs(mounts) {
+  if (!Array.isArray(mounts)) return [];
+  const args = [];
+  for (const mount of mounts) {
+    const hostPath = resolveHostPath(mount?.hostPath);
+    if (typeof mount?.containerPath !== "string" || !mount.containerPath.startsWith("/")) {
+      throw new HttpError(400, "mounts[].containerPath must be an absolute path");
+    }
+    const flag = mount.readOnly === false ? "rw" : "ro";
+    args.push("-v", `${hostPath}:${mount.containerPath}:${flag}`);
+  }
+  return args;
+}
+
+async function createSandbox({ sandboxId, sessionId, env: envVars, labels, ports, mounts }) {
   if (!sandboxId) throw new HttpError(400, "sandboxId required");
   const args = [
     "run",
@@ -132,6 +184,9 @@ async function createSandbox({ sandboxId, sessionId, env: envVars, labels, ports
   for (const [key, value] of Object.entries(envVars ?? {})) {
     args.push("-e", `${key}=${value}`);
   }
+  // Validate + add mounts before image tag. Errors here bubble as 400 before
+  // we touch docker.
+  args.push(...buildMountArgs(mounts));
   args.push(IMAGE_TAG);
 
   const { stdout } = await runDocker(args, { timeoutMs: 60_000 });
