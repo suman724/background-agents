@@ -35,6 +35,9 @@ Thumbs.db
 !.env.example
 .env.local
 .env.*.local
+# Catch dotless typos (e.g. someone saves `env.local` instead of `.env.local`)
+env.local
+env.*.local
 
 # Logs
 *.log

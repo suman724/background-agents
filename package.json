@@ -19,7 +19,8 @@
     "prepare": "node -e \"if (process.env.CI) process.exit(0)\" && husky",
     "dev:bootstrap": "./scripts/dev/bootstrap.sh",
     "dev:migrate": "./scripts/dev/migrate.sh",
-    "dev:control-plane": "wrangler dev --config packages/control-plane/wrangler.dev.jsonc --persist-to .wrangler/state --port 8787"
+    "dev:control-plane": "wrangler dev --config packages/control-plane/wrangler.dev.jsonc --persist-to .wrangler/state --port 8787",
+    "dev:web": "npm run dev -w @open-inspect/web"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
