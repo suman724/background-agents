@@ -1,0 +1,28 @@
+# Template for packages/control-plane/.dev.vars
+# Copy to .dev.vars and fill in placeholders, or run `npm run dev:bootstrap`
+# to have these generated for you.
+
+# Generated via `openssl rand -base64 32`
+TOKEN_ENCRYPTION_KEY=
+REPO_SECRETS_ENCRYPTION_KEY=
+
+# Generated via `openssl rand -hex 32`. Must match the value in packages/web/.env.local.
+INTERNAL_CALLBACK_SECRET=
+# Generated via `openssl rand -hex 32`. Must match the SANDBOX_DAEMON_SECRET passed to the sandbox daemon.
+LOCAL_DOCKER_DAEMON_SECRET=
+
+DEPLOYMENT_NAME=local-dev
+WORKER_URL=http://localhost:8787
+WEB_APP_URL=http://localhost:3000
+SCM_PROVIDER=github
+SANDBOX_PROVIDER=local-docker
+LOG_LEVEL=debug
+LOCAL_DOCKER_DAEMON_URL=http://localhost:9000
+
+# Dev GitHub App at https://github.com/settings/apps/new.
+# Private key MUST be PKCS#8 on Cloudflare Workers:
+#   openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in raw.pem -out app.pem
+# Paste the contents of app.pem (including BEGIN/END lines) as GITHUB_APP_PRIVATE_KEY.
+GITHUB_APP_ID=
+GITHUB_APP_PRIVATE_KEY=
+GITHUB_APP_INSTALLATION_ID=
