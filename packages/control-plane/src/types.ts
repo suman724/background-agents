@@ -87,6 +87,10 @@ export interface Env {
   // Local-docker sandbox provider (dev only) — both required when SANDBOX_PROVIDER=local-docker.
   LOCAL_DOCKER_DAEMON_URL?: string; // e.g. http://localhost:9000
   LOCAL_DOCKER_DAEMON_SECRET?: string; // Bearer secret matching scripts/dev/sandbox-daemon.mjs
+  // Optional: host path to OpenCode's auth.json. When set, the local-docker provider
+  // mounts it read-only into each sandbox so the in-container OpenCode can use the
+  // user's OAuth tokens (Claude Pro/Max, ChatGPT Plus/Pro, etc.) instead of API keys.
+  LOCAL_DOCKER_OPENCODE_AUTH_PATH?: string;
   DAYTONA_BASE_SNAPSHOT?: string; // Named Daytona snapshot used for fresh sandbox creation
   DAYTONA_AUTO_STOP_INTERVAL_MINUTES?: string; // Daytona idle stop interval in minutes
   DAYTONA_AUTO_ARCHIVE_INTERVAL_MINUTES?: string; // Daytona archive interval in minutes

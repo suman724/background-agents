@@ -14,6 +14,7 @@ import {
   LocalDockerNotFoundError,
   type LocalDockerCreateParams,
   type LocalDockerDaemonClient,
+  type LocalDockerMount,
 } from "../local-docker-daemon-client";
 import {
   SandboxProviderError,
@@ -39,7 +40,19 @@ export interface LocalDockerProviderConfig {
   codeServerPasswordSecret: string;
   /** Host name used in tunnel URLs returned to the browser. Defaults to "localhost". */
   tunnelHost?: string;
+  /**
+   * Optional host path to OpenCode's auth.json. When set, the provider mounts it
+   * read-only at /root/.local/share/opencode/auth.json inside each sandbox so the
+   * in-container OpenCode CLI can use the user's OAuth subscription tokens (Claude
+   * Pro/Max, ChatGPT Plus/Pro, etc.) instead of provider API keys.
+   *
+   * Path resolution (`~`, relative segments) happens on the daemon side — workerd
+   * can't read the filesystem.
+   */
+  opencodeAuthPath?: string;
 }
+
+const OPENCODE_AUTH_CONTAINER_PATH = "/root/.local/share/opencode/auth.json";
 
 export class LocalDockerSandboxProvider implements SandboxProvider {
   readonly name = "local-docker";
@@ -70,6 +83,7 @@ export class LocalDockerSandboxProvider implements SandboxProvider {
         env: envVars,
         labels,
         ports,
+        mounts: this.buildMounts(),
       };
 
       const response = await this.client.createSandbox(params);
@@ -231,6 +245,18 @@ export class LocalDockerSandboxProvider implements SandboxProvider {
       openinspect_repo: `${config.repoOwner}/${config.repoName}`,
       openinspect_expected_sandbox_id: config.sandboxId,
     };
+  }
+
+  private buildMounts(): LocalDockerMount[] | undefined {
+    const authPath = this.providerConfig.opencodeAuthPath?.trim();
+    if (!authPath) return undefined;
+    return [
+      {
+        hostPath: authPath,
+        containerPath: OPENCODE_AUTH_CONTAINER_PATH,
+        readOnly: true,
+      },
+    ];
   }
 
   private buildPortsRequest(config: CreateSandboxConfig): LocalDockerCreateParams["ports"] {

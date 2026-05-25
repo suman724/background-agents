@@ -18,6 +18,10 @@ SCM_PROVIDER=github
 SANDBOX_PROVIDER=local-docker
 LOG_LEVEL=debug
 LOCAL_DOCKER_DAEMON_URL=http://localhost:9000
+# Optional: host path to OpenCode auth.json. Set to mount the file read-only
+# into each sandbox so OpenCode uses your OAuth tokens instead of API keys.
+# Run `opencode auth login` on this host first to populate the file.
+LOCAL_DOCKER_OPENCODE_AUTH_PATH=
 
 # Dev GitHub App at https://github.com/settings/apps/new.
 # Private key MUST be PKCS#8 on Cloudflare Workers:

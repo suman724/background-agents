@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { normalizeKey, parseMaybeEnvContent, type ParsedEnvEntry } from "@/lib/env-paste";
+import { randomUuid } from "@/lib/uuid";
 
 const VALID_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const MAX_KEY_LENGTH = 256;
@@ -66,10 +67,7 @@ function getUtf8Size(value: string): number {
 }
 
 function createRow(partial?: Partial<SecretRow>): SecretRow {
-  const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2);
+  const id = randomUuid();
   return {
     id,
     key: "",

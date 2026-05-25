@@ -623,6 +623,7 @@ export class SessionDO extends DurableObject<Env> {
         {
           scmProvider,
           codeServerPasswordSecret: this.env.LOCAL_DOCKER_DAEMON_SECRET,
+          opencodeAuthPath: this.env.LOCAL_DOCKER_OPENCODE_AUTH_PATH,
         },
         buildGetCloneToken(scmProvider)
       );
