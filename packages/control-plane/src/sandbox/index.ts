@@ -43,6 +43,24 @@ export {
   type DaytonaSandboxResponse,
   type DaytonaCreateSandboxParams,
 } from "./daytona-rest-client";
+
+// Local-docker provider (dev only)
+export {
+  LocalDockerSandboxProvider,
+  createLocalDockerProvider,
+  type LocalDockerProviderConfig,
+} from "./providers/local-docker-provider";
+export {
+  LocalDockerDaemonClient,
+  LocalDockerNotFoundError,
+  LocalDockerApiError,
+  createLocalDockerDaemonClient,
+  type LocalDockerDaemonConfig,
+  type LocalDockerCreateParams,
+  type LocalDockerCreateResponse,
+  type LocalDockerInspectResponse,
+  type LocalDockerStartResponse,
+} from "./local-docker-daemon-client";
 export {
   resolveSandboxBackendName,
   isModalSandboxBackend,

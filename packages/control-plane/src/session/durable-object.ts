@@ -15,9 +15,12 @@ import { generateId, hashToken, encryptToken, decryptToken } from "../auth/crypt
 import { getGitHubAppConfig, getCachedInstallationToken } from "../auth/github-app";
 import { createModalClient } from "../sandbox/client";
 import { createDaytonaRestClient } from "../sandbox/daytona-rest-client";
+import { createLocalDockerDaemonClient } from "../sandbox/local-docker-daemon-client";
 import { createModalProvider } from "../sandbox/providers/modal-provider";
 import { createDaytonaProvider } from "../sandbox/providers/daytona-provider";
+import { createLocalDockerProvider } from "../sandbox/providers/local-docker-provider";
 import { resolveSandboxBackendName } from "../sandbox/provider-name";
+import type { SandboxProvider } from "../sandbox/provider";
 import { createLogger, parseLogLevel } from "../logger";
 import type { Logger } from "../logger";
 import {
@@ -551,73 +554,88 @@ export class SessionDO extends DurableObject<Env> {
   private createLifecycleManager(): SandboxLifecycleManager {
     const sandboxBackend = resolveSandboxBackendName(this.env.SANDBOX_PROVIDER);
 
-    const provider =
-      sandboxBackend === "daytona"
-        ? (() => {
-            if (
-              !this.env.DAYTONA_API_URL ||
-              !this.env.DAYTONA_API_KEY ||
-              !this.env.DAYTONA_BASE_SNAPSHOT
-            ) {
-              throw new Error(
-                "DAYTONA_API_URL, DAYTONA_API_KEY, and DAYTONA_BASE_SNAPSHOT are required when SANDBOX_PROVIDER=daytona"
-              );
-            }
+    const buildGetCloneToken = (scmProvider: ReturnType<typeof resolveScmProviderFromEnv>) => {
+      const appConfig = getGitHubAppConfig(this.env);
+      const getCloneToken: () => Promise<string | null> =
+        scmProvider === "gitlab"
+          ? () => Promise.resolve(this.env.GITLAB_ACCESS_TOKEN ?? null)
+          : appConfig
+            ? () =>
+                getCachedInstallationToken(appConfig, {
+                  cacheStore: createKvCacheStore(this.env.REPOS_CACHE),
+                  userAgent: resolveAppName(this.env),
+                })
+            : () => Promise.resolve(null);
+      return getCloneToken;
+    };
 
-            const daytonaClient = createDaytonaRestClient({
-              apiUrl: this.env.DAYTONA_API_URL,
-              apiKey: this.env.DAYTONA_API_KEY,
-              target: this.env.DAYTONA_TARGET,
-              baseSnapshot: this.env.DAYTONA_BASE_SNAPSHOT,
-              autoStopIntervalMinutes: parseInt(
-                this.env.DAYTONA_AUTO_STOP_INTERVAL_MINUTES || "120",
-                10
-              ),
-              autoArchiveIntervalMinutes: parseInt(
-                this.env.DAYTONA_AUTO_ARCHIVE_INTERVAL_MINUTES || "10080",
-                10
-              ),
-            });
+    let provider: SandboxProvider;
+    if (sandboxBackend === "daytona") {
+      if (
+        !this.env.DAYTONA_API_URL ||
+        !this.env.DAYTONA_API_KEY ||
+        !this.env.DAYTONA_BASE_SNAPSHOT
+      ) {
+        throw new Error(
+          "DAYTONA_API_URL, DAYTONA_API_KEY, and DAYTONA_BASE_SNAPSHOT are required when SANDBOX_PROVIDER=daytona"
+        );
+      }
 
-            const scmProvider = resolveScmProviderFromEnv(this.env.SCM_PROVIDER);
-            const appConfig = getGitHubAppConfig(this.env);
+      const daytonaClient = createDaytonaRestClient({
+        apiUrl: this.env.DAYTONA_API_URL,
+        apiKey: this.env.DAYTONA_API_KEY,
+        target: this.env.DAYTONA_TARGET,
+        baseSnapshot: this.env.DAYTONA_BASE_SNAPSHOT,
+        autoStopIntervalMinutes: parseInt(this.env.DAYTONA_AUTO_STOP_INTERVAL_MINUTES || "120", 10),
+        autoArchiveIntervalMinutes: parseInt(
+          this.env.DAYTONA_AUTO_ARCHIVE_INTERVAL_MINUTES || "10080",
+          10
+        ),
+      });
 
-            const getCloneToken: () => Promise<string | null> =
-              scmProvider === "gitlab"
-                ? () => Promise.resolve(this.env.GITLAB_ACCESS_TOKEN ?? null)
-                : appConfig
-                  ? () =>
-                      getCachedInstallationToken(appConfig, {
-                        cacheStore: createKvCacheStore(this.env.REPOS_CACHE),
-                        userAgent: resolveAppName(this.env),
-                      })
-                  : () => Promise.resolve(null);
+      const scmProvider = resolveScmProviderFromEnv(this.env.SCM_PROVIDER);
+      provider = createDaytonaProvider(
+        daytonaClient,
+        {
+          scmProvider,
+          gitlabAccessToken: this.env.GITLAB_ACCESS_TOKEN,
+          // Reuses API key as HMAC secret for code-server password derivation
+          // (distinct message prefix prevents collision with auth use)
+          codeServerPasswordSecret: this.env.DAYTONA_API_KEY,
+        },
+        buildGetCloneToken(scmProvider)
+      );
+    } else if (sandboxBackend === "local-docker") {
+      if (!this.env.LOCAL_DOCKER_DAEMON_URL || !this.env.LOCAL_DOCKER_DAEMON_SECRET) {
+        throw new Error(
+          "LOCAL_DOCKER_DAEMON_URL and LOCAL_DOCKER_DAEMON_SECRET are required when SANDBOX_PROVIDER=local-docker"
+        );
+      }
 
-            return createDaytonaProvider(
-              daytonaClient,
-              {
-                scmProvider,
-                gitlabAccessToken: this.env.GITLAB_ACCESS_TOKEN,
-                // Reuses API key as HMAC secret for code-server password derivation
-                // (distinct message prefix prevents collision with auth use)
-                codeServerPasswordSecret: this.env.DAYTONA_API_KEY,
-              },
-              getCloneToken
-            );
-          })()
-        : (() => {
-            if (!this.env.MODAL_API_SECRET || !this.env.MODAL_WORKSPACE) {
-              throw new Error(
-                "MODAL_API_SECRET and MODAL_WORKSPACE are required when SANDBOX_PROVIDER=modal"
-              );
-            }
+      const dockerClient = createLocalDockerDaemonClient({
+        daemonUrl: this.env.LOCAL_DOCKER_DAEMON_URL,
+        daemonSecret: this.env.LOCAL_DOCKER_DAEMON_SECRET,
+      });
 
-            const modalClient = createModalClient(
-              this.env.MODAL_API_SECRET,
-              this.env.MODAL_WORKSPACE
-            );
-            return createModalProvider(modalClient);
-          })();
+      const scmProvider = resolveScmProviderFromEnv(this.env.SCM_PROVIDER);
+      provider = createLocalDockerProvider(
+        dockerClient,
+        {
+          scmProvider,
+          codeServerPasswordSecret: this.env.LOCAL_DOCKER_DAEMON_SECRET,
+        },
+        buildGetCloneToken(scmProvider)
+      );
+    } else {
+      if (!this.env.MODAL_API_SECRET || !this.env.MODAL_WORKSPACE) {
+        throw new Error(
+          "MODAL_API_SECRET and MODAL_WORKSPACE are required when SANDBOX_PROVIDER=modal"
+        );
+      }
+
+      const modalClient = createModalClient(this.env.MODAL_API_SECRET, this.env.MODAL_WORKSPACE);
+      provider = createModalProvider(modalClient);
+    }
 
     // Storage adapter
     const storage: SandboxStorage = {
