@@ -1,0 +1,31 @@
+// Dev-mode wrangler config for `npm run dev:control-plane`.
+// The sibling wrangler.jsonc is test-only and consumed by integration tests
+// and Dockerfile.test — do not merge the two.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "open-inspect-control-plane-dev",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-12-30",
+  "durable_objects": {
+    "bindings": [
+      { "name": "SESSION", "class_name": "SessionDO" },
+      { "name": "SCHEDULER", "class_name": "SchedulerDO" },
+    ],
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["SessionDO"] },
+    { "tag": "v2", "new_sqlite_classes": ["SchedulerDO"] },
+  ],
+  // database_id is a dummy in local mode; wrangler ignores it and writes to .wrangler/state/.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_name": "open-inspect-local",
+      "migrations_dir": "../../terraform/d1/migrations",
+    },
+  ],
+  "kv_namespaces": [{ "binding": "REPOS_CACHE", "id": "local-dev" }],
+  "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "open-inspect-media-local" }],
+  "observability": { "enabled": false },
+}
