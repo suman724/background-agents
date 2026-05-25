@@ -1,7 +1,10 @@
 # Local Development Plan — Run All Three Layers on a Laptop
 
-**Status:** Approved plan. Not yet implemented. **Owner of execution:** TBD (to be picked up by a
-fresh agent). **Original design conversation:** May 2026.
+**Status:** v1 implemented and merged (May 2026). See tracking issue #18 for the per-phase PR
+history. The user-facing guide is now at [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md); this
+document is kept as the historical design record for v2+ planning.
+
+**Original design conversation:** May 2026.
 
 ---
 
@@ -302,7 +305,7 @@ The `database_id` is a dummy in local mode — wrangler ignores it and uses a lo
 ```
 "dev:bootstrap": "./scripts/dev/bootstrap.sh",
 "dev:migrate": "./scripts/dev/migrate.sh",
-"dev:control-plane": "wrangler dev --config packages/control-plane/wrangler.dev.jsonc --persist-to .wrangler/state --port 8787 --cwd packages/control-plane"
+"dev:control-plane": "wrangler dev --config packages/control-plane/wrangler.dev.jsonc --persist-to .wrangler/state --port 8787"
 ```
 
 ### 2.5 Verification gate (Phase 1 exit criterion)
@@ -569,7 +572,7 @@ Add `concurrently` as a root devDependency.
     "dev:build:sandbox": "./scripts/dev/build-sandbox-image.sh",
     "dev:migrate": "./scripts/dev/migrate.sh",
     "dev:sandbox-daemon": "node scripts/dev/sandbox-daemon.mjs",
-    "dev:control-plane": "wrangler dev --config packages/control-plane/wrangler.dev.jsonc --persist-to .wrangler/state --port 8787 --cwd packages/control-plane",
+    "dev:control-plane": "wrangler dev --config packages/control-plane/wrangler.dev.jsonc --persist-to .wrangler/state --port 8787",
     "dev:web": "npm run dev -w @open-inspect/web"
   }
 }

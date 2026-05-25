@@ -119,6 +119,10 @@ built for internal use where all employees are trusted and have access to compan
 
 ## Getting Started
 
+**Run the whole stack on your laptop** — control plane, web UI, and a real Docker sandbox per
+session — with `npm run dev`. See **[docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)** for the
+walkthrough, or **[docs/RUN_LOCALLY.md](docs/RUN_LOCALLY.md)** for the one-page command cheatsheet.
+
 For a practical setup guide (local + contributor + deployment paths), start with
 **[docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md)**.
 

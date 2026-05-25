@@ -9,6 +9,7 @@ It is organized by goal so you can pick the fastest path:
 | Path A | Run the web app locally against an existing backend      | ~10-20 min |
 | Path B | Contribute code locally (lint/typecheck/tests)           | ~15-30 min |
 | Path C | Deploy your own full stack (Cloudflare + Modal + Vercel) | ~1-3 hours |
+| Path D | Run **everything** locally — CP + web + sandboxes        | ~20 min    |
 
 ## Important Context
 
@@ -203,6 +204,14 @@ Critical notes before deploy:
 - Build `@open-inspect/shared` first.
 - Use two-phase Terraform deploy for DO/service bindings.
 - Deploy Modal with `modal deploy deploy.py` (not `src/app.py`).
+
+## Path D: Run Everything Locally
+
+If you want to run the **entire** stack on your laptop — control plane, web UI, **and** a real
+Docker sandbox per session — without any Cloudflare, Modal, or Daytona account:
+
+- [docs/LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md) — walkthrough
+- [docs/RUN_LOCALLY.md](./RUN_LOCALLY.md) — one-page command cheatsheet
 
 ## Common Issues and Fixes
 
