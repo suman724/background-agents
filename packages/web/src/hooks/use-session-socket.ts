@@ -199,6 +199,12 @@ function toUiArtifact(artifact: SessionArtifact): Artifact {
 
 export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
   const wsRef = useRef<WebSocket | null>(null);
+  // Monotonically incrementing connection generation. Each connect() captures
+  // its own value; event handlers compare against the current value and bail
+  // when stale. Defends against React 18 StrictMode dev double-mount, which
+  // can otherwise leak a second open WebSocket whose handlers run alongside
+  // the live one and duplicate every received event into state. See #33.
+  const connectGenRef = useRef(0);
   const connectingRef = useRef(false);
   const mountedRef = useRef(true);
   const subscribedRef = useRef(false);
@@ -558,10 +564,19 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     const wsUrl = `${WS_URL}/sessions/${sessionId}/ws`;
     console.log("WebSocket connecting to:", wsUrl);
 
+    // Capture this connection's generation. Handlers below short-circuit if
+    // a newer connect() has run since (e.g. StrictMode double-mount).
+    const myGen = ++connectGenRef.current;
+    const isStale = () => myGen !== connectGenRef.current;
+
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
+      if (isStale()) {
+        ws.close();
+        return;
+      }
       if (!mountedRef.current) {
         ws.close();
         return;
@@ -583,6 +598,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     };
 
     ws.onmessage = (event) => {
+      if (isStale()) return;
       try {
         const data = parseWsMessage(JSON.parse(event.data));
         if (!data) return;
@@ -598,6 +614,9 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         reason: event.reason,
         wasClean: event.wasClean,
       });
+      // A stale onclose still needs to release its own resources but must not
+      // mutate shared connection state — that belongs to the current generation.
+      if (isStale()) return;
       connectingRef.current = false;
       subscribedRef.current = false;
       setConnected(false);
@@ -644,6 +663,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     };
 
     ws.onerror = (error) => {
+      if (isStale()) return;
       console.error("WebSocket error event:", error);
     };
   }, [sessionId, handleMessage, fetchWsToken]);
