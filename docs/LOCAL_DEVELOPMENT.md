@@ -128,15 +128,42 @@ your `.dev.vars` says `modal` or `daytona` from a previous setup, flip it:
 sed -i 's/^SANDBOX_PROVIDER=.*/SANDBOX_PROVIDER=local-docker/' packages/control-plane/.dev.vars
 ```
 
-### 6. (Optional) LLM API key
+### 6. LLM credentials
 
-The agent inside the sandbox needs an LLM provider. The sandbox runtime forwards `ANTHROPIC_API_KEY`
-to OpenCode if present. If you skip this, sandboxes spawn fine but the first prompt fails with
-`ProviderModelNotFoundError: anthropic/...` — useful for verifying the wiring even without a key.
+The agent inside the sandbox needs to talk to an LLM provider. Two paths:
 
-To enable real responses, add `ANTHROPIC_API_KEY=...` to your repo secrets via the dashboard (or
-temporarily into `.dev.vars` as a quick test — note that the local-docker provider only forwards
-`userEnvVars` from the session config, so the .dev.vars route requires extra wiring).
+#### Recommended: OAuth via OpenCode `auth.json` mount
+
+Lets the in-sandbox OpenCode use your existing ChatGPT Plus/Pro subscription via OAuth. No static
+API keys — works under org policies that forbid them.
+
+```bash
+# 1. Install OpenCode on the dev box (same version pinned in the sandbox image).
+sudo npm install -g opencode-ai@1.14.41
+
+# 2. Authenticate. Pick "OpenAI" → "ChatGPT Pro/Plus (headless)" if you're on an
+#    SSH-only box without a browser. The headless flow prints a URL + code; visit
+#    the URL on your laptop, paste the code, and the dev box stores the token in
+#    ~/.local/share/opencode/auth.json.
+opencode auth login
+
+# 3. Confirm the file exists.
+ls -la ~/.local/share/opencode/auth.json
+```
+
+The `bootstrap.sh` script already seeds `LOCAL_DOCKER_OPENCODE_AUTH_PATH` in `.dev.vars` pointing at
+that file. The `LocalDockerSandboxProvider` mounts it read-only into every sandbox at
+`/root/.local/share/opencode/auth.json`, so the in-container OpenCode finds your tokens on boot.
+
+To use OpenAI models, set the default model in **Settings → Model Preferences** to `openai/gpt-5.4`
+(or any `openai/*`). Anthropic models won't work via this path — OpenCode 1.14.41 removed the Claude
+Pro/Max OAuth flow per Anthropic's ToS.
+
+#### Alternative: API key (if your org allows static keys)
+
+The sandbox forwards any keys present in your **repo secrets** (Settings → Secrets) into the
+container's env. Set `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` there. Note that this is per-repo, not
+global, so you'd repeat for each repo you test against.
 
 ## Run it
 
@@ -238,8 +265,14 @@ Your GitHub App credentials are missing or wrong. Re-check `GITHUB_APP_ID`,
 
 ### Agent says `ProviderModelNotFoundError: anthropic/...`
 
-The sandbox didn't get an `ANTHROPIC_API_KEY`. See §6 above. Provider/sandbox wiring is fine — this
-is purely a missing-credential symptom.
+The sandbox doesn't have credentials for the default Anthropic model. Either switch the default
+model to `openai/*` (via Settings → Model Preferences) so the OpenCode auth.json mount covers it, or
+add an API key to repo secrets. See §6 above.
+
+### `crypto.randomUUID is not a function` in browser console (LAN mode)
+
+Was a real bug — fixed in `packages/web/src/lib/uuid.ts` (polyfill that falls back to
+`crypto.getRandomValues()` for insecure contexts). If you see it, your branch is missing the fix.
 
 ## What's intentionally not included in v1
 
