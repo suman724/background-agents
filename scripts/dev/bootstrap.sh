@@ -84,6 +84,11 @@ UNSAFE_ALLOW_ALL_USERS=true
 NEXT_PUBLIC_SANDBOX_PROVIDER=local-docker
 NEXT_PUBLIC_SCM_PROVIDER=github
 
+# Only needed for cross-machine LAN access (e.g. running \`npm run dev:web:lan\`
+# and browsing from another host on the LAN). Comma-separated list of origins
+# Next.js will accept HMR / hydration requests from. Leave empty for localhost-only dev.
+NEXT_DEV_ALLOWED_ORIGINS=
+
 # Fill these from your dev GitHub OAuth App at https://github.com/settings/applications/new
 #   Homepage URL:                http://localhost:3000
 #   Authorization callback URL:  http://localhost:3000/api/auth/callback/github
