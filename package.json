@@ -20,7 +20,9 @@
     "dev:bootstrap": "./scripts/dev/bootstrap.sh",
     "dev:migrate": "./scripts/dev/migrate.sh",
     "dev:control-plane": "wrangler dev --config packages/control-plane/wrangler.dev.jsonc --persist-to .wrangler/state --port 8787",
-    "dev:web": "npm run dev -w @open-inspect/web"
+    "dev:control-plane:lan": "wrangler dev --config packages/control-plane/wrangler.dev.jsonc --persist-to .wrangler/state --port 8787 --ip 0.0.0.0",
+    "dev:web": "npm run dev -w @open-inspect/web",
+    "dev:web:lan": "npm run dev -w @open-inspect/web -- -H 0.0.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
